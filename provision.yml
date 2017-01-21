@@ -123,6 +123,7 @@
   - name: Get vagrant deb file
     sudo: no
     get_url: url="https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb" dest="{{ download_dir }}vagrant.deb"
+    get_url: url="https://releases.hashicorp.com/vagrant/1.9.1/vagrant_1.9.1_x86_64.deb" dest="{{ download_dir }}vagrant.deb"
 
   - name: Install Vagrant
     apt: deb="{{ download_dir }}vagrant.deb"
@@ -140,18 +141,17 @@
     command: vagrant plugin list
     register: vagrant_plugins
 
-  #- name: Install Vagrant lxc provider.
-    #sudo: no
-    #shell: vagrant plugin install vagrant-lxc
-    #when: '"vagrant-lxc" not in vagrant_plugins'
-
-  - name: Add lxc base boxes.
+  - name: Install Vagrant lxc provider.
     sudo: no
-    shell: vagrant box add "https://vagrantcloud.com/fgrehm/boxes/"{{ item }}"-lxc"
-    with_items:
-      - precise64
-      - trusty64
-    ignore_errors: yes
+    shell: vagrant plugin install vagrant-lxc
+    when: '"vagrant-lxc" not in vagrant_plugins'
+
+#  - name: Add lxc base boxes.
+#    sudo: no
+#    shell: vagrant box add "https://vagrantcloud.com/fgrehm/boxes/"{{ item }}"-lxc"
+#    with_items:
+#      - trusty64
+#    ignore_errors: yes
 
   # geospatial
   - name: Ensure ppa:ubuntugis-unstable/ppa repository key is added
@@ -181,36 +181,11 @@
       - powerline-status
       - flake8
 
-  # Vim plugins
-  #- name: Compile Command-T VIM plugin.
-    #shell: rake make chdir="/home/arjen/.vim/bundle/Command-T/"
-
-  #- name: Compile YouCompleteMe VIM plugin.
-    #shell: ./install.sh chdir="/home/arjen/.vim/bundle/YouCompleteMe/"
-
-    # nodejs ppa
-  - name: Ensure ppa:chris-lea/node.js repository key is added
-    apt_key: id=314DF160 url='http://keyserver.ubuntu.com/pks/lookup?op=get&search=0x6B827C12C2D425E227EDCA75089EBE08314DF160' 
-
-  - name: Ensure ppa:chris-lea/node.js to repository is added to the apt sources
-    apt_repository: repo='deb http://ppa.launchpad.net/chris-lea/node.js/ubuntu vivid main' state=present update_cache=yes
-
-  # node-js
-  - name: Make sure nodejs is installed
-    apt: pkg=nodejs force=yes
-
-  - name: Install bower and grunt-cli
-    npm: name={{ item }} global=yes 
-    with_items:
-     - bower
-     - grunt-cli
-     - jshint
-
   # setup tmux directories
   - name: Create .tmux dir
     file: >
         path={{ home_dir }}/.tmux/plugins/tpm/
-        owner={{ local_user }}
+        owner={{  local_user }}
         group={{ local_user }}
         mode=0755
         state=directory
@@ -220,3 +195,29 @@
     sudo: no
     git: repo=https://github.com/tmux-plugins/tpm
          dest={{ home_dir }}/.tmux/plugins/tpm
+
+  - name: Get dotfiles
+    sudo: no
+    git: repo=https://github.com/arjenvrielink/dotfiles
+         dest={{ home_dir }}/dotfiles
+
+  - name: symlink dotfiles
+    file: >
+        src=/home/{{ local_user }}/dotfiles/{{ item }}
+        dest=/home/{{ local_user }}/.{{ item }}
+        force=yes
+        owner={{ local_user }}
+        group={{ local_user }}
+        mode=0755
+        state=link
+    with_items:
+      - 'vimrc'
+      - 'zshrc'
+      - 'tmux'
+
+  # Vim plugins
+  - name: Compile Command-T VIM plugin.
+    shell: rake make chdir="/home/arjen/.vim/bundle/Command-T/"
+
+  - name: Compile YouCompleteMe VIM plugin.
+    shell: ./install.sh chdir="/home/arjen/.vim/bundle/YouCompleteMe/"
