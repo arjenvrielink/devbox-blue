@@ -1,6 +1,6 @@
 ---
 - hosts: local
-  sudo: yes
+  become: yes
   vars:
     home_dir: "/home/arjen/"
     download_dir: "{{ home_dir }}Downloads/"
@@ -74,14 +74,14 @@
 
   # Fonts
   - name: Get powerline fonts.
-    sudo: no
+    become: no
     get_url: url="https://github.com/powerline/powerline/raw/develop/font/{{ item }}" dest="{{ download_dir }}fonts/{{ item }}"
     with_items:
       - PowerlineSymbols.otf
       - 10-powerline-symbols.conf
 
   - name: Get adobe fonts.
-    sudo: no
+    become: no
     git: repo=https://github.com/adobe-fonts/{{ item }}.git
          dest={{ download_dir }}fonts/{{ item }}
          version=release
@@ -90,7 +90,7 @@
       - source-code-pro
 
   - name: Symlink adobe fonts to valid X font path.
-    sudo: no
+    become: no
     file: src={{ download_dir }}fonts/{{ item }}
           dest={{ home_dir }}.fonts/{{ item }}
           state=link
@@ -101,7 +101,7 @@
       - source-code-pro
 
   - name: Symlink symbols to valid X font path.
-    sudo: no
+    become: no
     file: src={{ download_dir }}fonts/PowerlineSymbols.otf
           dest={{ home_dir }}.fonts/PowerLineSymbols.otf
           state=link
@@ -112,7 +112,7 @@
     command: fc-cache -vf "{{ home_dir }}.fonts/"
 
   - name: Symlink fontconfig file.
-    sudo: no
+    become: no
     file: src={{ download_dir }}fonts/10-powerline-symbols.conf
           path={{ home_dir }}.config/fontconfig/conf.d/10-powerline-symbols.conf
           state=link
@@ -121,7 +121,7 @@
 
   # Vagrant
   - name: Get vagrant deb file
-    sudo: no
+    become: no
     get_url: url="https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb" dest="{{ download_dir }}vagrant.deb"
     get_url: url="https://releases.hashicorp.com/vagrant/1.9.1/vagrant_1.9.1_x86_64.deb" dest="{{ download_dir }}vagrant.deb"
 
@@ -142,12 +142,12 @@
     register: vagrant_plugins
 
   - name: Install Vagrant lxc provider.
-    sudo: no
+    become: no
     shell: vagrant plugin install vagrant-lxc
     when: '"vagrant-lxc" not in vagrant_plugins'
 
 #  - name: Add lxc base boxes.
-#    sudo: no
+#    become: no
 #    shell: vagrant box add "https://vagrantcloud.com/fgrehm/boxes/"{{ item }}"-lxc"
 #    with_items:
 #      - trusty64
@@ -191,13 +191,13 @@
         state=directory
         recurse=yes
 
-  - name: Get tmux plugin manager (TPM)
-    sudo: no
-    git: repo=https://github.com/tmux-plugins/tpm
-         dest={{ home_dir }}/.tmux/plugins/tpm
+    #- name: Get tmux plugin manager (TPM)
+    #become: no
+    #git: repo=https://github.com/tmux-plugins/tpm
+    #     dest={{ home_dir }}/.tmux/plugins/tpm
 
   - name: Get dotfiles
-    sudo: no
+    become: no
     git: repo=https://github.com/arjenvrielink/dotfiles
          dest={{ home_dir }}/dotfiles
 
@@ -213,11 +213,31 @@
     with_items:
       - 'vimrc'
       - 'zshrc'
-      - 'tmux'
+
+  - name: symlink tmux dotfiles
+    file: >
+        src=/home/{{ local_user }}/dotfiles/tmux/tmux.conf
+        dest=/home/{{ local_user }}/.tmux
+        force=yes
+        owner={{ local_user }}
+        group={{ local_user }}
+        mode=0755
+        state=link
 
   # Vim plugins
+  - name: Vundle
+    become: no
+    git: repo=https://github.com/VundleVim/Vundle.vim.git
+         dest=/home/{{ local_user }}/.vim/bundle/Vundle.vim
+    tags:
+      - vim
+
   - name: Compile Command-T VIM plugin.
     shell: rake make chdir="/home/arjen/.vim/bundle/Command-T/"
+    tags:
+      - vim-plugin
 
   - name: Compile YouCompleteMe VIM plugin.
     shell: ./install.sh chdir="/home/arjen/.vim/bundle/YouCompleteMe/"
+    tags:
+      - vim-plugin
