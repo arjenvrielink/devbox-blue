@@ -55,6 +55,9 @@
       - libreoffice
       - lolcat
       - cmus
+      - openvpn
+      - network-manager-openvpn
+      - network-manager-openvpn-gnome
 
   # remove unneeded packages
   - name: Remove unneeded packages
